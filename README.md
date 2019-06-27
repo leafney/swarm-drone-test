@@ -47,3 +47,29 @@
 
 *****
 
+#### Dont use configs for setting environment of drone
+
+use configs like:
+```
+    configs:
+      - source: drone-agent-env
+        target: /.env
+```
+
+**This will not take effect. Please use the way of environment.**
+
+like:
+```
+    environment:
+      - DRONE_OPEN=true
+      - DRONE_SERVER_HOST=${DRONE_SERVER_HOST}
+      - DRONE_SERVER_PROTO=${DRONE_SERVER_PROTO}
+      - DRONE_TLS_AUTOCERT=false
+      - DRONE_GIT_ALWAYS_AUTH=true
+      - DRONE_GITEA_SERVER=${DRONE_GITEA_SERVER}
+```
+
+When I find a solution, I will update it.
+
+*****
+
