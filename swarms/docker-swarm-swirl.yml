@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+  swirl:
+    image: cuigh/swirl:0.8.5
+    environment:
+      DB_TYPE: bolt
+      DB_ADDRESS: /data/swirl
+      AUTH_TIMEOUT: 24h
+    networks:
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - swirl-data:/data/swirl
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+      labels:
+      - "traefik.enable=true"
+      - "traefik.port=8001"
+      - "traefik.protocol=http"
+      - "traefik.frontend.rule=Host:swirl.abcd.com"
+      - "traefik.docker.network=traefik-net"
+
+volumes:
+  swirl-data:
+
+networks:
+  traefik-net:
+    external: true

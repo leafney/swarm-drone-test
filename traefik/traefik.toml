@@ -1,0 +1,28 @@
+debug = true
+logLevel = "INFO"
+
+[traefikLog]
+  filePath = "./traefik.log"
+  format   = "json"
+
+[accessLog]
+  filePath = "./access.log"
+  format = "json"
+
+defaultEntryPoints = ["http"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+
+[api]
+dashboard = true
+entryPoint = "traefik"
+
+[docker]
+endpoint = "unix:///var/run/docker.sock"
+domain = "abcd.com"
+watch = true
+exposedbydefault = false
+swarmMode = true
+network = "traefik-net"

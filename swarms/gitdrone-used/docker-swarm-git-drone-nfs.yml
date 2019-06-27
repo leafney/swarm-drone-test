@@ -1,0 +1,101 @@
+version: "3.7"
+services:
+  drone-server:
+    image: drone/drone:1.2.1
+    networks:
+      - gitdrone
+    ports:
+      - "8000:80"
+    volumes:
+      - type: volume
+        source: drone-data
+        target: /data
+        volume:
+          nocopy: true
+    environment:
+      - DRONE_OPEN=true
+      - DRONE_SERVER_HOST=${DRONE_SERVER_HOST}
+      - DRONE_SERVER_PROTO=${DRONE_SERVER_PROTO}
+      - DRONE_TLS_AUTOCERT=false
+      - DRONE_GIT_ALWAYS_AUTH=true
+      - DRONE_GITEA_SERVER=${DRONE_GITEA_SERVER}
+      - DRONE_AGENTS_ENABLED=true
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      - DRONE_LOGS_DEBUG=true
+      - DRONE_USER_CREATE=username:${DRONE_ADMIN},admin:true
+      - DRONE_GITEA_CLIENT_ID=${DRONE_GITEA_CLIENT_ID}
+      - DRONE_GITEA_CLIENT_SECRET=${DRONE_GITEA_CLIENT_SECRET}
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  drone-agent:
+    image: drone/agent:1.2.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitdrone
+    environment:
+      - DRONE_RPC_SERVER=${DRONE_RPC_SERVER}
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      - DRONE_RUNNER_CAPACITY=2
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 20s
+
+  gitea-server:
+    image: gitea/gitea:1.8.3
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    ports:
+      - "10080:3000"
+      - "10022:22"
+    networks:
+      - gitdrone
+    volumes:
+      - type: volume
+        source: gitea-data
+        target: /data
+        volume:
+          nocopy: true
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 20s
+
+networks:
+  gitdrone:
+
+volumes:
+  drone-data:
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.5.20,nolock,soft,rw"
+      device: ":/data/swarm/gitdrone/drone"
+  gitea-data:
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.5.20,nolock,soft,rw"
+      device: ":/data/swarm/gitdrone/gitea"

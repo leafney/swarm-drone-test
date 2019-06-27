@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  swirl:
+    image: cuigh/swirl:0.8.5
+    environment:
+      DB_TYPE: bolt
+      DB_ADDRESS: /data/swirl
+      AUTH_TIMEOUT: 24h
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - swirl-data:/data/swirl
+    ports:
+      - 8001:8001
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+volumes:
+  swirl-data:

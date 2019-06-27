@@ -1,0 +1,104 @@
+version: "3.7"
+services:
+  drone-server:
+    image: drone/drone:1.2.1
+    networks:
+      - gitdrone
+      - traefik-net
+    configs:
+      - source: drone-server-env
+        target: /.env
+    volumes:
+      - type: volume
+        source: drone-data
+        target: /data
+        volume:
+          nocopy: true
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.port=80"
+        - "traefik.protocol=http"
+        - "traefik.frontend.rule=Host:drone.abcd.com"
+        - "traefik.docker.network=traefik-net"
+
+  drone-agent:
+    image: drone/agent:1.2.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitdrone
+    configs:
+      - source: drone-agent-env
+        target: /.env
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 20s
+
+  gitea-server:
+    image: gitea/gitea:1.8.3
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    ports:
+      - "10080:3000"
+      - "10022:22"
+    networks:
+      - gitdrone
+    volumes:
+      - type: volume
+        source: gitea-data
+        target: /data
+        volume:
+          nocopy: true
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 20s
+
+networks:
+  gitdrone:
+
+  traefik-net:
+    external: true
+
+configs:
+  drone-server-env:
+    file: ./.server-env
+  drone-agent-env:
+    file: ./.agent-env
+
+volumes:
+  drone-data:
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.5.20,nolock,soft,rw"
+      device: ":/data/swarm/gitdrone/drone_data"
+  gitea-data:
+    driver_opts:
+      type: "nfs"
+      o: "addr=192.168.5.20,nolock,soft,rw"
+      device: ":/data/swarm/gitdrone/gitea_data"

@@ -1,0 +1,27 @@
+version: "3.7"
+services:
+  traefik:
+    image: traefik:1.7.12
+    networks:
+      - traefik-net
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $PWD/traefik.toml:/traefik.toml
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      labels:
+      - "traefik.enable=true"
+      - "traefik.port=8080"
+      - "traefik.protocol=http"
+      - "traefik.frontend.rule=Host:traefik.abcd.com"
+      - "traefik.docker.network=traefik-net"
+
+networks:
+  traefik-net:
+    external: true

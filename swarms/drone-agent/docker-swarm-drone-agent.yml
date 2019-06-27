@@ -1,0 +1,29 @@
+version: "3.7"
+services:
+  drone-agent:
+    image: drone/agent:1.2.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitdrone
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 20s
+    environment:
+      - DRONE_RPC_SERVER=${DRONE_RPC_SERVER}
+      #- DRONE_RPC_SERVER=http://192.168.5.20:8000
+      - DRONE_RPC_SECRET=${DRONE_RPC_SECRET}
+      #- DRONE_RPC_SECRET=c58cbb7db107b9926133108fedec48e3
+      - DRONE_RUNNER_CAPACITY=2
+      - DRONE_LOGS_TRACE=true
+
+networks:
+  gitdrone:
+    external: true
