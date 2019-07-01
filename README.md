@@ -71,6 +71,8 @@ like:
 
 When I find a solution, I will update it.
 
+Note: The error is that when you use `configs` to map environment variables, drone does not load these environment variables. For example, the parameter `DRONE_SERVER_HOST` is still the default `127.0.0.1`. This will result in an automatically created webhook address of the form `http://localhost/hook...`, but this will not trigger a webhook call to drone server.
+
 *****
 
 #### drone/first
