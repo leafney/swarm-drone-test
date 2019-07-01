@@ -73,3 +73,20 @@ When I find a solution, I will update it.
 
 *****
 
+#### drone/first
+
+drone pipeline test for `test` `build` `publish-docker` `deploy`
+
+#### drone/second
+
+drone pipeline test for `manual deployment` by `drone cli`
+
+```
+# get last build number:
+$ drone build last abc/go_demo
+
+# manual deploy
+$ drone build promote abc/go_demo 42 prod
+```
+
+*****

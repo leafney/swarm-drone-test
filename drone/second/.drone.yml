@@ -1,0 +1,110 @@
+kind: pipeline
+name: test
+
+clone:
+  disable: true
+
+#workspace:
+#  base: /drone/src
+#  path: go_demo
+
+steps:
+  - name: custom-clone
+    image: leafney/golang-git-bash
+    pull: if-not-exists
+    commands:
+      - echo $(pwd) && ls -al
+      - git clone http://192.168.5.20:10080/abc/go_demo.git /drone/src
+      - git checkout $DRONE_COMMIT
+      - echo $(pwd) && ls -al
+    when:
+      event:
+        exclude: [promote]
+
+#  - name: modules
+#    image: leafney/golang-git-bash
+#    pull: if-not-exists
+#    environment:
+#      GO111MODULE: on
+#      GOPROXY: https://athens.azurefd.net
+#    commands:
+#      - go mod tidy
+
+  - name: test
+    image: leafney/golang-git-bash
+    pull: if-not-exists
+    environment:
+      GO111MODULE: on
+      GOPROXY: https://athens.azurefd.net
+      CGO_ENABLED: 0
+    commands:
+      - go mod tidy
+      - go test -v ./...
+    when:
+      event:
+        exclude: [promote]
+
+  - name: build
+    image: leafney/golang-git-bash
+    pull: if-not-exists
+    environment:
+      GO111MODULE: on
+      GOPROXY: https://athens.azurefd.net
+      CGO_ENABLED: 0
+      GOOS: linux
+    commands:
+      - go mod tidy
+      - go build -ldflags "-s -w" -o app main.go
+      - ls -al
+    when:
+      event:
+        exclude: [promote]
+
+  - name: publish-docker
+    image: plugins/docker
+    pull: if-not-exists
+    settings:
+      registry: registry.cn-beijing.aliyuncs.com
+      repo: registry.cn-beijing.aliyuncs.com/leafney/go_demo
+      dockerfile: ./Dockerfile.drone
+      custom_dns: 8.8.8.8
+      mirror: http://f1361db2.m.daocloud.io
+      username:
+        from_secret: aliyun_docker_username
+      password:
+        from_secret: aliyun_docker_password
+      auto_tag: true
+      cache_from: "registry.cn-beijing.aliyuncs.com/leafney/go_demo:latest" # use cache from image
+#      dry_run: true # when true,just build image,do not push to registry. default false.
+    when:
+      event:
+        exclude: [promote]
+
+  - name: deploy
+    image: appleboy/drone-ssh
+    environment:
+      DOCKER_USERNAME:
+        from_secret: aliyun_docker_username
+      DOCKER_PASSWORD:
+        from_secret: aliyun_docker_password
+    settings:
+      username:
+        from_secret: ssh_username
+      password:
+        from_secret: ssh_password
+      host:
+        from_secret: ssh_host
+      port:
+        from_secret: ssh_port
+      command_timeout: 1m
+      envs: [DOCKER_USERNAME,DOCKER_PASSWORD]
+      script:
+        - ls -al
+        - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD registry.cn-beijing.aliyuncs.com
+        - docker service ls
+        - docker service rm go_demo || true
+        - docker service create --replicas=3 -p 8080:8080 --with-registry-auth --name go_demo registry.cn-beijing.aliyuncs.com/leafney/go_demo:latest
+        - docker service ls | grep "go_demo"
+    when:
+      event: [promote]
+      target: [prod]
